@@ -16,7 +16,6 @@
 
 from __future__ import print_function
 
-from packaging.version import Version
 import getopt
 import glob
 import os
@@ -25,7 +24,7 @@ import subprocess
 import sys
 import time
 
-__version__ = '0.8.2'
+__version__ = '0.8.3'
 
 doctypes = ('document', 'graphics', 'presentation', 'spreadsheet')
 
@@ -62,6 +61,22 @@ def realpath(*args):
         ret = os.path.join(ret, arg)
     return os.path.realpath(os.path.abspath(ret))
 
+def cmp_versions(a, b):
+    a_parts = a.split(".")
+    b_parts = b.split(".")
+    l = min(len(a_parts), len(b_parts))
+
+    for i in range(l):
+        d = int(a_parts[i]) - int(b_parts[i])
+        if d != 0:
+            return d
+
+    return len(a_parts) - len(b_parts)
+
+# Example usage:
+# print(cmp_versions("1.2.3", "1.2.4"))  # Output: -1
+# print(cmp_versions("1.2.3", "1.2.3"))  # Output: 0
+# print(cmp_versions("1.2.3", "1.2"))    # Output: 1
 
 # The first thing we should do is find a suitable Office installation
 # with a compatible pyuno library that we can import.
@@ -867,7 +882,7 @@ class Convertor:
             info(3, "Launching our own listener using %s." % office.binary)
             try:
                 product = self.svcmgr.createInstance("com.sun.star.configuration.ConfigurationProvider").createInstanceWithArguments("com.sun.star.configuration.ConfigurationAccess", UnoProps(nodepath="/org.openoffice.Setup/Product"))
-                if product.ooName not in ('LibreOffice', 'LOdev') or Version(product.ooSetupVersion) <= Version('3.3'):
+                if product.ooName not in ('LibreOffice', 'LOdev') or (cmp_versions(product.ooSetupVersion, '3.3') <= 0):
                     args = [office.binary, "-headless", "-invisible", "-nocrashreport", "-nodefault", "-nofirststartwizard", "-nologo", "-norestore", "-accept=%s" % op.connection]
                 else:
                     args = [office.binary, "--headless", "--invisible", "--nocrashreport", "--nodefault", "--nofirststartwizard", "--nologo", "--norestore", "--accept=%s" % op.connection]
@@ -1235,7 +1250,7 @@ class Listener:
             else:
                 info(1, "Existing %s listener found, nothing to do." % product.ooName)
                 return
-            if product.ooName != "LibreOffice" or Version(product.ooSetupVersion) <= Version('3.3'):
+            if product.ooName != "LibreOffice" or (cmp_versions(product.ooSetupVersion, '3.3') <= 0):
                 cmd = [office.binary, "-headless", "-invisible", "-nocrashreport", "-nodefault", "-nologo", "-nofirststartwizard", "-norestore", "-accept=%s" % op.connection]
             else:
                 cmd = [office.binary, "--headless", "--invisible", "--nocrashreport", "--nodefault", "--nologo", "--nofirststartwizard", "--norestore", "--accept=%s" % op.connection]
